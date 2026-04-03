@@ -5,6 +5,8 @@ import { db, firebaseAuth } from './firebase'
 import { Alert, Linking, Text, View } from 'react-native';
 import AppStack from './src/navigation/AppStack'
 import AuthStack from './src/navigation/AuthStack'
+import AuthProvider from './src/context/AuthContext'
+
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -61,10 +63,11 @@ const App = () => {
   </View>; // Or a splash screen
 
   return (
-
-    <NavigationContainer>
-      {user ? <AppStack /> : <AuthStack />}
-    </NavigationContainer>
+    <AuthProvider>
+      <NavigationContainer>
+        {user ? <AppStack /> : <AuthStack />}
+      </NavigationContainer>
+    </AuthProvider>
 
   );
 };
