@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+
+# Android build files
+android/build/
+android/app/build/
+android/.gradle/
+android/app/.cxx/
+*.iml
+*.apk
+*.aar
+local.properties
+
+# iOS build files
+ios/Pods/
+ios/build/
+DerivedData/
+*.moved-aside
+
+# System files
+.DS_Store
+*.swp
+*.log
