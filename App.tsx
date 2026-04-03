@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-
+import { SecurityProvider } from './src/context/securityContext'
 import { db, firebaseAuth } from './firebase'
 import { Alert, Linking, Text, View } from 'react-native';
 import AppStack from './src/navigation/AppStack'
@@ -64,9 +64,11 @@ const App = () => {
 
   return (
     <AuthProvider>
-      <NavigationContainer>
-        {user ? <AppStack /> : <AuthStack />}
-      </NavigationContainer>
+      <SecurityProvider>
+        <NavigationContainer>
+          {user ? <AppStack /> : <AuthStack />}
+        </NavigationContainer>
+      </SecurityProvider>
     </AuthProvider>
 
   );
