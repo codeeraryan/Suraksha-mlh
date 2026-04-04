@@ -16,7 +16,7 @@ const SOS_KEYWORDS = [
 
 // Fake call trigger keywords
 const FAKE_CALL_KEYWORDS = [
-  'bahut acha', 'jao yaha se', 'mujhe dar lag rha hai',
+  'bahut acha', 'jao yaha se','mujhe dar lag rha hai',
 ];
 
 // Location safety check keywords
