@@ -5,12 +5,13 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
+  Linking,
 } from 'react-native';
 import { SecurityContext } from '../context/securityContext';
 import { colors } from '../colors';
 
 const AlertScreen = ({ navigation }) => {
-  const { contacts, cancelSOS, isSOSActive } = useContext(SecurityContext);
+  const { contacts, cancelSOS, isSOSActive, guardianAlert } = useContext(SecurityContext);
 
   return (
     <View style={styles.container}>
@@ -23,12 +24,49 @@ const AlertScreen = ({ navigation }) => {
       <View style={styles.mainContainer}>
 
         {!isSOSActive ? (
-          // 🟢 NO ALERT STATE
-          <View style={styles.noAlertContainer}>
-            <Text style={styles.noAlertText}>
-              🟢 You are safe. No alerts active.
-            </Text>
-          </View>
+          guardianAlert ? (
+            // 🚨 INCOMING ALERT FROM CONTACT
+            <View style={styles.guardianAlertContainer}>
+              <Text style={styles.guardianHeader}>🚨 INCOMING ALERT</Text>
+
+              <View style={styles.alertCard}>
+                <Text style={styles.alertLabel}>From Contact:</Text>
+                <Text style={styles.alertValue}>{guardianAlert.fromUserName}</Text>
+              </View>
+
+              <View style={styles.alertCard}>
+                <Text style={styles.alertLabel}>Status:</Text>
+                <Text style={[styles.alertValue, { color: '#FF3B30' }]}>
+                  {guardianAlert.status.toUpperCase()}
+                </Text>
+              </View>
+
+              <View style={styles.alertCard}>
+                <Text style={styles.alertLabel}>Time:</Text>
+                <Text style={styles.alertValue}>
+                  {new Date(guardianAlert.timestamp).toLocaleString()}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.trackButton}
+                onPress={() => Linking.openURL(guardianAlert.locationLink)}
+              >
+                <Text style={styles.trackButtonText}>📍 TRACK LIVE LOCATION</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.helperText}>
+                Please check on them immediately or contact emergency services.
+              </Text>
+            </View>
+          ) : (
+            // 🟢 NO ALERT STATE
+            <View style={styles.noAlertContainer}>
+              <Text style={styles.noAlertText}>
+                🟢 You are safe. No alerts active.
+              </Text>
+            </View>
+          )
         ) : (
           // 🔴 ACTIVE SOS UI
           <>
@@ -196,5 +234,61 @@ const styles = StyleSheet.create({
     color: colors.secondary_text,
     fontSize: 18,
     textAlign: 'center',
+  },
+
+  // GUARDIAN ALERT STYLES
+  guardianAlertContainer: {
+    marginTop: 10,
+  },
+  guardianHeader: {
+    color: '#FF3B30',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 25,
+  },
+  alertCard: {
+    backgroundColor: '#1E1E1E',
+    padding: 18,
+    borderRadius: 15,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF3B30',
+  },
+  alertLabel: {
+    color: '#B0B0B0',
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  alertValue: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  trackButton: {
+    backgroundColor: '#FF3B30',
+    padding: 18,
+    borderRadius: 30,
+    alignItems: 'center',
+    marginTop: 20,
+    elevation: 5,
+    shadowColor: '#FF3B30',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  trackButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  helperText: {
+    color: '#B0B0B0',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 20,
+    fontStyle: 'italic',
   },
 });

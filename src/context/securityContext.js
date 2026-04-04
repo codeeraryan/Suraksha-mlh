@@ -1,6 +1,6 @@
 import React, { createContext, useState, useRef, useEffect } from 'react';
 import { BleManager } from 'react-native-ble-plx';
-import { PermissionsAndroid, Platform, Alert, Linking, NativeModules } from 'react-native';
+import { PermissionsAndroid, Platform, Alert, Linking, NativeModules, AppState } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
 import SendSMS from 'react-native-sms';
 import { db, firebaseAuth } from '../../firebase';
@@ -13,45 +13,72 @@ export const SecurityProvider = ({ children }) => {
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [isLocationLoading, setIsLocationLoading] = useState(false);
     const [contacts, setContacts] = useState([]);
+    const [guardianAlert, setGuardianAlert] = useState(null);
     const subscriptionRef = useRef(null);
     const unsubscribeContactsRef = useRef(null);
 
     const BOAT_CHAR = 'fe2c1238-8366-4814-8eb0-01de32100bea';
 
     // ================= PERMISSIONS =================
-    useEffect(() => {
-        const requestPermissions = async () => {
-            if (Platform.OS === 'android') {
-                try {
-                    const granted = await PermissionsAndroid.requestMultiple([
-                        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-                        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-                        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-                        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-                        PermissionsAndroid.PERMISSIONS.SEND_SMS,
-                    ]);
+    // ================= PERMISSIONS & LOCATION CHECK =================
+    const checkAndRequestLocation = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.requestMultiple([
+                    PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+                    PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
+                    PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+                    PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+                    PermissionsAndroid.PERMISSIONS.SEND_SMS,
+                ]);
 
-                    const allGranted =
-                        granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED &&
-                        granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED &&
-                        granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] === PermissionsAndroid.RESULTS.GRANTED &&
-                        granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] === PermissionsAndroid.RESULTS.GRANTED &&
-                        granted[PermissionsAndroid.PERMISSIONS.SEND_SMS] === PermissionsAndroid.RESULTS.GRANTED;
+                const locationGranted =
+                    granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED ||
+                    granted[PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED;
 
-                    if (!allGranted) {
-                        Alert.alert(
-                            "Permissions Needed",
-                            "Please allow Location, Bluetooth, and SMS permissions for SOS to work properly."
-                        );
-                    }
-
-                } catch (err) {
-                    console.warn(err);
+                if (!locationGranted) {
+                    // Automatically open settings if permissions are missing
+                    Linking.openSettings();
+                    return;
                 }
-            }
-        };
 
-        requestPermissions();
+                // Check if GPS is actually ON
+                Geolocation.getCurrentPosition(
+                    () => { console.log("GPS is enabled and working"); },
+                    (error) => {
+                        console.log("GPS Check Error:", error);
+                        if (error.code === 2 || error.message?.includes("Location services are disabled")) {
+                            // Automatically open device location settings
+                            if (Platform.OS === 'android') {
+                                Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+                            } else {
+                                Linking.openSettings();
+                            }
+                        }
+                    },
+                    { enableHighAccuracy: true, timeout: 3000 }
+                );
+
+            } catch (err) {
+                console.warn("Permission Error:", err);
+            }
+        }
+    };
+
+    useEffect(() => {
+        // Initial check on mount
+        checkAndRequestLocation();
+
+        // Check whenever app returns to foreground
+        const subscription = AppState.addEventListener('change', nextAppState => {
+            if (nextAppState === 'active') {
+                checkAndRequestLocation();
+            }
+        });
+
+        return () => {
+            subscription.remove();
+        };
     }, []);
 
     // ================= REAL-TIME CONTACTS =================
@@ -93,6 +120,53 @@ export const SecurityProvider = ({ children }) => {
             authUnsubscribe();
         };
     }, []);
+
+    // ================= REAL-TIME GUARDIAN ALERTS =================
+    useEffect(() => {
+        let unsubscribe = null;
+
+        const setupAlertListener = () => {
+            const user = firebaseAuth.currentUser;
+            if (user?.uid) {
+                console.log("Setting up real-time alert listener for:", user.uid);
+                unsubscribe = db.collection('alerts')
+                    .where('toUserId', '==', user.uid)
+                    .where('status', '==', 'active')
+                    .orderBy('timestamp', 'desc')
+                    .limit(1)
+                    .onSnapshot(snapshot => {
+                        if (!snapshot.empty) {
+                            const alertData = {
+                                id: snapshot.docs[0].id,
+                                ...snapshot.docs[0].data()
+                            };
+                            console.log("New Guardian Alert received:", alertData.fromUserName);
+                            setGuardianAlert(alertData);
+                        } else {
+                            setGuardianAlert(null);
+                        }
+                    }, error => {
+                        console.error("Firestore Alert Listener Error:", error);
+                    });
+            } else {
+                setGuardianAlert(null);
+            }
+        };
+
+        setupAlertListener();
+
+        // Listen for auth changes to reset listener
+        const authUnsubscribe = firebaseAuth.onAuthStateChanged((user) => {
+            if (unsubscribe) unsubscribe();
+            setupAlertListener();
+        });
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+            authUnsubscribe();
+        };
+    }, []);
+
 
     // ================= SOS FUNCTION =================
     const triggerSOS = async () => {
@@ -139,7 +213,7 @@ export const SecurityProvider = ({ children }) => {
                     db.collection('alerts').add({
                         toUserId: contact.linkedUid,
                         fromUserId: firebaseAuth.currentUser?.uid,
-                        fromUserName: "Emergency User", // Fallback if userData unavailable
+                        fromUserName: firebaseAuth.currentUser?.displayName || "SOS User",
                         latitude: lat || 0,
                         longitude: lon || 0,
                         locationLink: link || "unavailable",
@@ -340,7 +414,9 @@ export const SecurityProvider = ({ children }) => {
                 cancelSOS,
                 contacts,
                 setContacts,
-                sendLocation
+                sendLocation,
+                guardianAlert,
+                setGuardianAlert
             }}
         >
             {children}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { SecurityProvider } from './src/context/securityContext'
 import { db, firebaseAuth } from './firebase'
@@ -6,13 +6,23 @@ import { Alert, Linking, Text, View } from 'react-native';
 import AppStack from './src/navigation/AppStack'
 import AuthStack from './src/navigation/AuthStack'
 import AuthProvider from './src/context/AuthContext'
+import SplashScreen from './src/screens/SplashScreen'
 
 
 const App = () => {
   const [user, setUser] = useState(null);
   const [initializing, setInitializing] = useState(true);
-  console.log("hey");
+  const sessionStartTime = useRef(new Date().toISOString()).current;
+  const shownAlerts = useRef(new Set()).current;
+  const [isLoading, setIsLoading] = useState(true)
 
+
+  useEffect(() => {
+    const time = setTimeout(() => {
+      setIsLoading(false)
+    }, 5000)
+    return () => clearTimeout(time);
+  }, [])
   useEffect(() => {
     const user = firebaseAuth.currentUser;
     if (!user) return;
@@ -24,15 +34,21 @@ const App = () => {
         snapshot.docChanges().forEach(change => {
           if (change.type === 'added') {
             const data = change.doc.data();
-            // Trigger a high-priority system alert or navigation
-            Alert.alert(
-              "🚨 EMERGENCY ALERT",
-              `${data.fromUserName} is in danger! Do you want to see their location?`,
-              [
-                { text: "Dismiss", style: "cancel" },
-                { text: "Track Location", onPress: () => Linking.openURL(data.locationLink) }
-              ]
-            );
+            const alertId = change.doc.id;
+
+            // Only show alerts that are NEW in this session and haven't been shown yet
+            if (data.timestamp && data.timestamp > sessionStartTime && !shownAlerts.has(alertId)) {
+              shownAlerts.add(alertId);
+              // Trigger a high-priority system alert or navigation
+              Alert.alert(
+                "🚨 EMERGENCY ALERT",
+                `${data.fromUserName} is in danger! Do you want to see their location?`,
+                [
+                  { text: "Dismiss", style: "cancel" },
+                  { text: "Track Location", onPress: () => Linking.openURL(data.locationLink) }
+                ]
+              );
+            }
           }
         });
       });
@@ -57,10 +73,11 @@ const App = () => {
     }
   }, []);
 
-  if (initializing) return
-  <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: 'white' }}>
-    <Text style={{ color: "black" }} >Loading...</Text>
-  </View>; // Or a splash screen
+  if (initializing || isLoading) {
+    return (
+      <SplashScreen />
+    );
+  }
 
   return (
     <AuthProvider>

@@ -116,7 +116,7 @@ const ScannerScreen = ({ navigation }) => {
         } else {
             try {
                 await connectDevice(device);
-                navigation.navigate('Main');
+                navigation.navigate('MainTabs');
             } catch (e) {
                 Alert.alert('Connection Error', e.message);
             }
