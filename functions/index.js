@@ -4,9 +4,10 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 admin.initializeApp();
 
-// Gemini API Key — move to Firebase Secrets for production
-const GEMINI_API_KEY = "AIzaSyAHTYCpZex8eX6pS17WV8GIx7ZMZ3R-L1g";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// Get Gemini API Key from .env file
+// GET_API="AIzaSyAHTYCpZex8eX6pS17WV8GIx7ZMZ3R-L1g"
+const GET_API = "AIzaSyAHTYCpZex8eX6pS17WV8GIx7ZMZ3R-L1g";
+const genAI = new GoogleGenerativeAI(GET_API);
 
 /**
  * Cloud Function: askGemini

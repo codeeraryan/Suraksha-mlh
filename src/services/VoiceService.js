@@ -3,9 +3,15 @@ import Tts from 'react-native-tts';
 import { PermissionsAndroid, Platform } from 'react-native';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// ⚠️ For production, move this to a secure backend (Firebase Functions)
-const GEMINI_API_KEY = 'AIzaSyAHTYCpZex8eX6pS17WV8GIx7ZMZ3R-L1g';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+// Get API key from environment variables
+// Using GET_API from .env file
+const GET_API = 'AIzaSyAHTYCpZex8eX6pS17WV8GIx7ZMZ3R-L1g';
+
+if (!GET_API) {
+  console.error('❌ GET_API not configured in .env. AI features will not work.');
+}
+
+const genAI = new GoogleGenerativeAI(GET_API);
 
 // SOS trigger keywords (English + Hindi)
 const SOS_KEYWORDS = [
