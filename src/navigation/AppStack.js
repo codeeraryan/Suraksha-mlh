@@ -1,17 +1,20 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import React from 'react';
+import { StyleSheet } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Tabs from './Tabs';
 import { colors } from '../colors';
 import ScannerScreen from '../screens/ScannerScreen';
-import AddContactScreen from '../screens/AddContactScreen'
+import AddContactScreen from '../screens/AddContactScreen';
+import VoiceAssistantScreen from '../screens/VoiceAssistantScreen';
+import FakeCallScreen from '../screens/FakeCallScreen';
+
+const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
-    const Stack = createNativeStackNavigator();
     return (
         <Stack.Navigator initialRouteName="MainTabs">
 
-            {/* Tabs */}
+            {/* Bottom Tabs */}
             <Stack.Screen
                 name="MainTabs"
                 component={Tabs}
@@ -29,7 +32,7 @@ const AppStack = () => {
                 }}
             />
             <Stack.Screen
-                name='AddContact'
+                name="AddContact"
                 component={AddContactScreen}
                 options={{
                     title: 'Add Contact',
@@ -38,12 +41,32 @@ const AppStack = () => {
                 }}
             />
 
+            {/* AI Voice Assistant */}
+            <Stack.Screen
+                name="VoiceAssistant"
+                component={VoiceAssistantScreen}
+                options={{
+                    title: 'Suraksha AI',
+                    headerStyle: { backgroundColor: colors.background_color },
+                    headerTintColor: '#00FFAA',
+                    headerTitleStyle: { fontWeight: '700', fontSize: 18 },
+                }}
+            />
+
+            {/* Fake Call Screen — full screen, no header */}
+            <Stack.Screen
+                name="FakeCall"
+                component={FakeCallScreen}
+                options={{
+                    headerShown: false,
+                    animation: 'slide_from_bottom',
+                }}
+            />
 
         </Stack.Navigator>
-    )
+    );
+};
 
-}
+export default AppStack;
 
-export default AppStack
-
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({});

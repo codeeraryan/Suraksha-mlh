@@ -11,6 +11,7 @@ export const SecurityProvider = ({ children }) => {
     const [connectedDevice, setConnectedDevice] = useState(null);
     const [isSOSActive, setIsSOSActive] = useState(false);
     const [contacts, setContacts] = useState([]);
+    const [isLocationLoading, setIsLocationLoading] = useState(false);
     const subscriptionRef = useRef(null);
     const unsubscribeContactsRef = useRef(null);
 
@@ -219,6 +220,7 @@ export const SecurityProvider = ({ children }) => {
 
     const sendLocation = async () => {
         try {
+            setIsLocationLoading(true);
             if (contacts.length === 0) {
                 Alert.alert("No Contacts", "Please add emergency contacts first.");
                 return;
@@ -266,6 +268,7 @@ export const SecurityProvider = ({ children }) => {
                             .catch(err => console.error("Direct SMS Error:", err));
                     }
 
+                    setIsLocationLoading(false);
                     Alert.alert("Success", "location sent to the saved contacts")
                 },
 
@@ -283,6 +286,7 @@ export const SecurityProvider = ({ children }) => {
                             .catch(err => console.error("Direct SMS Error:", err));
                     }
 
+                    setIsLocationLoading(false);
                     Alert.alert(
                         "Location Issue",
                         "Location failed, but message sent to visit our app."
@@ -296,9 +300,9 @@ export const SecurityProvider = ({ children }) => {
                 }
             );
         } catch (error) {
+            setIsLocationLoading(false);
             Alert.alert("Error", error.message);
             console.log(error);
-
         }
     }
 
@@ -363,7 +367,8 @@ export const SecurityProvider = ({ children }) => {
                 cancelSOS,
                 contacts,
                 setContacts,
-                sendLocation
+                sendLocation,
+                isLocationLoading,
             }}
         >
             {children}
