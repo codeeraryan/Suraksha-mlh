@@ -4,6 +4,7 @@ import { colors } from '../colors';
 import { SecurityContext } from '../context/securityContext';
 import { firebaseAuth } from '../../firebase';
 import { useAuth } from '../context/AuthContext';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const ProfileScreen = ({ navigation }) => {
   const { contacts, connectedDevice, disconnectDevice } = useContext(SecurityContext);
@@ -44,14 +45,25 @@ const ProfileScreen = ({ navigation }) => {
             style={styles.avatar}
           />
           <Text style={styles.name}>{userData?.name}</Text>
-          <Text style={{ color: 'gray' }}>{userData?.mobile}</Text>
+          <Text style={{ color: 'gray', marginTop: 4 }}>{userData?.mobile}</Text>
           <Text style={{ color: 'gray' }}>{user?.email}</Text>
           <Text style={styles.subText}>Stay Safe 💙</Text>
         </View>
 
+        {/* FAKE CALL BUTTON */}
+        <TouchableOpacity
+          style={styles.fakeCallBtn}
+          onPress={() => navigation.navigate('FakeCall')}
+        >
+          <Text style={styles.fakeCallBtnText}>📞 Get A Fake Call</Text>
+        </TouchableOpacity>
+
         {/* CONTACT CARD */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>👥 Emergency Contacts</Text>
+          <View style={styles.cardHeader}>
+            <Icon name="account-multiple-outline" size={24} color={colors.primary_text} />
+            <Text style={styles.cardTitle}>Emergency Contacts</Text>
+          </View>
           <Text style={styles.cardValue}>{contacts.length} Added</Text>
 
           <TouchableOpacity
@@ -64,7 +76,10 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* BLUETOOTH CARD */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>📡 Bluetooth Device</Text>
+          <View style={styles.cardHeader}>
+            <Icon name="bluetooth" size={24} color={colors.primary_text} />
+            <Text style={styles.cardTitle}>Bluetooth Device</Text>
+          </View>
           <Text style={styles.cardValue}>
             {connectedDevice
               ? `Connected to ${connectedDevice.name}`
@@ -90,7 +105,10 @@ const ProfileScreen = ({ navigation }) => {
 
         {/* SAFETY STATUS */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>🛡 Safety Status</Text>
+          <View style={styles.cardHeader}>
+            <Icon name="shield-check-outline" size={24} color={colors.accent} />
+            <Text style={styles.cardTitle}>Safety Status</Text>
+          </View>
           <Text style={styles.cardValue}>All systems ready</Text>
         </View>
 
@@ -100,7 +118,14 @@ const ProfileScreen = ({ navigation }) => {
           style={styles.logoutBtn}
           onPress={() => signOut()}
         >
-          {isLoggingOut ? <ActivityIndicator size={'small'} color={"black"} /> : <Text style={styles.btnText}>Logout</Text>}
+          {isLoggingOut ? (
+            <ActivityIndicator size={'small'} color={"black"} />
+          ) : (
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Icon name="logout" size={20} color={colors.primary_text} style={{ marginRight: 8 }} />
+              <Text style={styles.btnText}>Logout</Text>
+            </View>
+          )}
         </TouchableOpacity>
 
       </ScrollView>
@@ -185,7 +210,31 @@ const styles = StyleSheet.create({
     color: colors.primary_text,
     fontSize: 16,
     fontWeight: '800',
-    marginBottom: 8,
+    marginLeft: 10,
+  },
+
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  fakeCallBtn: {
+    backgroundColor: colors.accent,
+    padding: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+    marginHorizontal: 15,
+    marginVertical: 15,
+  },
+  fakeCallBtnText: {
+    color: '#000000',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 
   cardValue: {
@@ -242,4 +291,4 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
-});
+});

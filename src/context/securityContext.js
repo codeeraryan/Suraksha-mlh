@@ -6,6 +6,7 @@ import SendSMS from 'react-native-sms';
 import { db, firebaseAuth } from '../../firebase';
 import AudioRecord from 'react-native-audio-record';
 import RNFS from 'react-native-fs';
+import * as Vosk from 'react-native-vosk';
 
 export const SecurityContext = createContext();
 const manager = new BleManager();
@@ -17,6 +18,7 @@ export const SecurityProvider = ({ children }) => {
     const [sosRecordingCountdown, setSosRecordingCountdown] = useState(10);
     const [isLocationLoading, setIsLocationLoading] = useState(false);
     const [contacts, setContacts] = useState([]);
+    const contactsRef = useRef([]);
     const [guardianAlert, setGuardianAlert] = useState(null);
     const subscriptionRef = useRef(null);
     const unsubscribeContactsRef = useRef(null);
@@ -92,6 +94,52 @@ export const SecurityProvider = ({ children }) => {
         };
     }, []);
 
+    // ================= WAKE WORD DETECTION (VOSK) =================
+    useEffect(() => {
+        let resultEvent = null;
+
+        const initWakeWord = async () => {
+            try {
+                if (Platform.OS === 'android') {
+                    const granted = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+                    if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                        console.log("Mic permission denied for wake word.");
+                        return;
+                    }
+                }
+
+                console.log("Loading Vosk Model...");
+                await Vosk.loadModel('model-en');
+                console.log("Vosk model loaded successfully");
+
+                // Start recognizing continuously
+                await Vosk.start();
+                console.log("Vosk recognition started");
+
+                resultEvent = Vosk.onResult((res) => {
+                    const text = typeof res === 'string' ? res : (res?.text || JSON.stringify(res));
+                    if (text && text.toLowerCase().includes('help')) {
+                        console.log("done");
+                        triggerSOS();
+                    }
+                });
+
+            } catch (err) {
+                console.error("Vosk Wake Word Error:", err);
+            }
+        };
+
+        // Delay slightly to ensure permissions dialog doesn't clash heavily on fresh load
+        setTimeout(() => {
+            initWakeWord();
+        }, 1500);
+
+        return () => {
+            if (resultEvent) resultEvent.remove();
+            try { Vosk.unload(); } catch (e) { }
+        };
+    }, []);
+
     // ================= REAL-TIME CONTACTS =================
     useEffect(() => {
         let unsubscribe = null;
@@ -108,6 +156,7 @@ export const SecurityProvider = ({ children }) => {
                             ...doc.data()
                         }));
                         console.log("Real-time Contacts Updated:", contactList.length);
+                        contactsRef.current = contactList;
                         setContacts(contactList);
                     }, error => {
                         console.error("Firestore Contact Listener Error:", error);
@@ -193,7 +242,8 @@ export const SecurityProvider = ({ children }) => {
     // ================= SOS FUNCTION =================
     const triggerSOS = async () => {
         cancelSOSFlag.current = false;
-        if (contacts.length === 0) {
+        const currentContacts = contactsRef.current;
+        if (currentContacts.length === 0) {
             Alert.alert("No Contacts", "Please add emergency contacts first.");
             return;
         }
@@ -254,7 +304,7 @@ export const SecurityProvider = ({ children }) => {
                         try {
                             const audioFilePath = await AudioRecord.stop();
                             console.log('🎙 Recording stopped. Saved at:', audioFilePath);
-                            
+
                             if (audioFilePath) {
                                 // Read the full saved .wav file as a valid base64 string
                                 const fileBase64 = await RNFS.readFile(audioFilePath, 'base64');
@@ -314,7 +364,7 @@ export const SecurityProvider = ({ children }) => {
             ? `🚨 EMERGENCY: I need help!\nMy Location: ${locationLink}\nCheck SurakshaApp for details.`
             : `🚨 EMERGENCY: I need help!\n(Location Unavailable)\nCheck SurakshaApp or call me!`;
 
-        for (const contact of contacts) {
+        for (const contact of currentContacts) {
             if (contact.mobile) {
                 NativeModules.DirectSms.sendDirectSms(contact.mobile, message)
                     .catch(err => console.error('SMS Error:', err));

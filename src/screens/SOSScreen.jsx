@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Image, ActivityIndicator } fr
 import { SecurityContext } from '../context/securityContext';
 import { colors } from '../colors/index.js'
 import { useContext, useEffect, useState } from 'react';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 const SOSScreen = ({ navigation }) => {
     const {
@@ -15,6 +16,68 @@ const SOSScreen = ({ navigation }) => {
         sendLocation,
         isLocationLoading
     } = useContext(SecurityContext);
+
+    const [safetyTip, setSafetyTip] = useState('Loading safety tips...');
+    const [isTipLoading, setIsTipLoading] = useState(true);
+
+    const fallbackTips = [
+        "Share live location with trusted contact",
+        "Verify cab number before entering",
+        "Avoid dark and isolated areas",
+        "Keep emergency numbers on speed dial",
+        "Use safety apps with SOS feature",
+        "Stay alert in crowded places",
+        "Avoid using phone while walking alone at night",
+        "Carry a whistle or alarm device",
+        "Inform family before traveling",
+        "Trust your instincts in unsafe situations",
+        "Sit near exit in public transport",
+        "Avoid sharing personal details with strangers",
+    ];
+
+    const fetchSafetyTip = async () => {
+        try {
+            setIsTipLoading(true);
+            const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyDCRxngdFMAypNO6XZN462ueCAK37ucOlA', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: "Give exactly 12 different women safety tips. Rules: One line each, Separated ONLY by commas, No numbering, No explanation"
+                        }]
+                    }]
+                })
+            });
+
+            const data = await response.json();
+            let tipsArray = data?.candidates?.[0]?.content?.parts?.[0]?.text
+                ?.split(",")
+                .map((t) => t.trim()) || [];
+
+            // if Gemini gives less tips → add fallback
+            if (tipsArray.length < 12) {
+                tipsArray = [...tipsArray, ...fallbackTips].slice(0, 12);
+            }
+
+            // Pick a random tip from the 12
+            const randomTip = tipsArray[Math.floor(Math.random() * tipsArray.length)];
+            setSafetyTip(randomTip);
+
+        } catch (error) {
+            console.error("Gemini API Error:", error);
+            // full fallback
+            setSafetyTip(fallbackTips[Math.floor(Math.random() * fallbackTips.length)]);
+        } finally {
+            setIsTipLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchSafetyTip();
+    }, []);
 
     useEffect(() => {
         if (isSOSActive) {
@@ -62,6 +125,23 @@ const SOSScreen = ({ navigation }) => {
                     <Text style={styles.msgText}>
                         Tap to send emergency alert to trusted contacts.
                     </Text>
+                </View>
+            )}
+
+            {/* Safety Tip Card */}
+            {!isSOSActive && !isSOSSending && (
+                <View style={styles.tipCard}>
+                    <View style={styles.tipHeader}>
+                        <Text style={styles.tipTitle}>🛡️ Safety Tip</Text>
+                        <TouchableOpacity onPress={fetchSafetyTip}>
+                            <Icon name="refresh" color="white" size={16} />
+                        </TouchableOpacity>
+                    </View>
+                    {isTipLoading ? (
+                        <ActivityIndicator size="small" color={colors.accent} style={{ marginTop: 10 }} />
+                    ) : (
+                        <Text style={styles.tipText}>"{safetyTip}"</Text>
+                    )}
                 </View>
             )}
 
@@ -196,6 +276,44 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: colors.primary_text,
         marginLeft: 10
+    },
+    tipCard: {
+        backgroundColor: colors.card,
+        width: '85%',
+        padding: 20,
+        borderRadius: 20,
+        marginTop: 40,
+        borderWidth: 1,
+        borderColor: colors.card_border,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    tipHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    tipTitle: {
+        color: colors.accent,
+        fontSize: 14,
+        fontWeight: '800',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
+    },
+    refreshIcon: {
+        fontSize: 16,
+        color: colors.secondary_text,
+    },
+    tipText: {
+        color: colors.primary_text,
+        fontSize: 15,
+        fontWeight: '500',
+        lineHeight: 22,
+        fontStyle: 'italic',
     }
 });
 
