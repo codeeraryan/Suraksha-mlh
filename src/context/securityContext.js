@@ -25,6 +25,7 @@ export const SecurityProvider = ({ children }) => {
     const recordingTimer = useRef(null);
     const isRecording = useRef(false);
     const lastNotifiedAlertId = useRef(null);
+    const cancelSOSFlag = useRef(false);
 
     const BOAT_CHAR = 'fe2c1238-8366-4814-8eb0-01de32100bea';
 
@@ -191,6 +192,7 @@ export const SecurityProvider = ({ children }) => {
 
     // ================= SOS FUNCTION =================
     const triggerSOS = async () => {
+        cancelSOSFlag.current = false;
         if (contacts.length === 0) {
             Alert.alert("No Contacts", "Please add emergency contacts first.");
             return;
@@ -291,6 +293,11 @@ export const SecurityProvider = ({ children }) => {
             ? `https://www.google.com/maps?q=${location.lat},${location.lon}`
             : null;
 
+        if (cancelSOSFlag.current) {
+            console.log("SOS aborted before sending to DB/SMS.");
+            return;
+        }
+
         // ---- STEP 4: Send SMS + Firestore alert WITH audio already embedded ----
         let senderName = firebaseAuth.currentUser?.displayName;
         if (!senderName && firebaseAuth.currentUser?.uid) {
@@ -334,9 +341,32 @@ export const SecurityProvider = ({ children }) => {
     };
 
     // ================= CANCEL SOS =================
-    const cancelSOS = () => {
+    const cancelSOS = async () => {
+        cancelSOSFlag.current = true;
         setIsSOSActive(false);
         setIsSOSSending(false);
+
+        if (firebaseAuth.currentUser?.uid) {
+            try {
+                const alertsRef = db.collection('alerts');
+                const q = await alertsRef
+                    .where('fromUserId', '==', firebaseAuth.currentUser.uid)
+                    .where('status', '==', 'active')
+                    .get();
+
+                if (!q.empty) {
+                    const batch = db.batch();
+                    q.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    console.log("Cancelled active alerts in Firestore.");
+                }
+            } catch (error) {
+                console.error("Error cancelling alerts in Firestore:", error);
+            }
+        }
+
         Alert.alert("Safe", "SOS stopped");
     };
 

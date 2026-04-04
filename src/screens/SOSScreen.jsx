@@ -11,6 +11,7 @@ const SOSScreen = ({ navigation }) => {
         isSOSSending,
         sosRecordingCountdown,
         triggerSOS,
+        cancelSOS,
         sendLocation,
         isLocationLoading
     } = useContext(SecurityContext);
@@ -53,7 +54,7 @@ const SOSScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             {isSOSActive || isSOSSending ? (
-                <TouchableOpacity onPress={() => { setIsSOSActive(false); }}>
+                <TouchableOpacity onPress={() => cancelSOS()}>
                     <Text style={styles.cancelText}>CANCEL ALERT</Text>
                 </TouchableOpacity>
             ) : (
