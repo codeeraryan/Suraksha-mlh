@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,64 @@ import {
   TouchableOpacity,
   FlatList,
   Linking,
+  Platform,
+  Alert,
 } from 'react-native';
 import { SecurityContext } from '../context/securityContext';
 import { colors } from '../colors';
+import RNFS from 'react-native-fs';
+import Sound from 'react-native-sound';
+
+Sound.setCategory('Playback');
 
 const AlertScreen = ({ navigation }) => {
   const { contacts, cancelSOS, isSOSActive, guardianAlert } = useContext(SecurityContext);
+  const soundRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const playVoiceRecording = async () => {
+    if (!guardianAlert?.audioData) {
+      Alert.alert('No Recording', 'No voice recording available for this alert yet. It may still be uploading.');
+      return;
+    }
+
+    // If already playing, stop it
+    if (isPlaying && soundRef.current) {
+      soundRef.current.stop();
+      soundRef.current.release();
+      soundRef.current = null;
+      setIsPlaying(false);
+      return;
+    }
+
+    try {
+      console.log('Saving audio to temp file...');
+      const path = `${RNFS.CachesDirectoryPath}/sos_playback.wav`;
+      await RNFS.writeFile(path, guardianAlert.audioData, 'base64');
+      console.log('Audio saved to:', path);
+
+      setIsPlaying(true);
+      const sound = new Sound(path, '', (error) => {
+        if (error) {
+          console.error('Sound load error:', error);
+          Alert.alert('Playback Error', 'Could not play the voice recording.');
+          setIsPlaying(false);
+          return;
+        }
+        sound.play((success) => {
+          console.log('Playback finished, success:', success);
+          setIsPlaying(false);
+          sound.release();
+          soundRef.current = null;
+        });
+      });
+      soundRef.current = sound;
+    } catch (error) {
+      console.error('Playback Error:', error);
+      setIsPlaying(false);
+      Alert.alert('Error', 'Could not play the recording.');
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -54,6 +106,21 @@ const AlertScreen = ({ navigation }) => {
               >
                 <Text style={styles.trackButtonText}>📍 TRACK LIVE LOCATION</Text>
               </TouchableOpacity>
+
+              {/* Voice Recording Button */}
+              {guardianAlert.audioData && (
+                <TouchableOpacity
+                  style={[
+                    styles.playButton,
+                    isPlaying && styles.playButtonActive,
+                  ]}
+                  onPress={playVoiceRecording}
+                >
+                  <Text style={styles.playButtonText}>
+                    {isPlaying ? '⏹ STOP PLAYBACK' : '🔊 PLAY VOICE RECORDING'}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               <Text style={styles.helperText}>
                 Please check on them immediately or contact emergency services.
@@ -135,17 +202,18 @@ const styles = StyleSheet.create({
 
   headerContainer: {
     marginTop: 20,
-    marginHorizontal: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#00FFAA",
+    marginHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.card_border,
     alignItems: "center",
+    paddingBottom: 10,
   },
 
   headerText: {
-    fontSize: 20,
-    color: "#fff",
-    fontWeight: "bold",
-    marginBottom: 8,
+    fontSize: 22,
+    color: colors.primary_text,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
 
   mainContainer: {
@@ -154,141 +222,204 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    color: '#FF3B30',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: colors.danger,
+    fontSize: 20,
+    fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
+    letterSpacing: 1,
   },
 
   statusContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
   },
 
   pulseDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#FF3B30',
-    marginBottom: 10,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.danger,
+    marginBottom: 12,
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 10,
   },
 
   title: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: 'bold',
+    color: colors.primary_text,
+    fontSize: 24,
+    fontWeight: '800',
   },
 
   subtitle: {
-    color: '#B0B0B0',
-    fontSize: 14,
-    marginTop: 5,
+    color: colors.secondary_text,
+    fontSize: 15,
+    marginTop: 6,
+    fontWeight: '500',
   },
 
   card: {
-    backgroundColor: '#1E1E1E',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
+    backgroundColor: colors.card,
+    padding: 18,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.card_border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
 
   cardTitle: {
-    color: '#FFFFFF',
+    color: colors.primary_text,
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontWeight: '800',
+    marginBottom: 10,
   },
 
   cardText: {
-    color: '#B0B0B0',
-    fontSize: 14,
+    color: colors.secondary_text,
+    fontSize: 15,
+    lineHeight: 20,
   },
 
   contactItem: {
-    color: '#4CAF50',
-    fontSize: 14,
-    marginBottom: 5,
+    color: colors.accent,
+    fontSize: 15,
+    marginBottom: 6,
+    fontWeight: '600',
   },
 
   stopButton: {
-    backgroundColor: '#FF3B30',
-    padding: 16,
-    borderRadius: 30,
+    backgroundColor: colors.danger,
+    padding: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 25,
+    marginTop: 30,
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
 
   stopButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#000000',
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 
   noAlertContainer: {
     alignItems: 'center',
-    marginTop: 120,
+    justifyContent: 'center',
+    marginTop: 150,
   },
 
   noAlertText: {
     color: colors.secondary_text,
     fontSize: 18,
     textAlign: 'center',
+    fontWeight: '500',
   },
 
   // GUARDIAN ALERT STYLES
   guardianAlertContainer: {
-    marginTop: 10,
+    marginTop: 5,
   },
   guardianHeader: {
-    color: '#FF3B30',
-    fontSize: 24,
-    fontWeight: 'bold',
+    color: colors.danger,
+    fontSize: 26,
+    fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 25,
+    marginBottom: 30,
+    letterSpacing: 1,
   },
   alertCard: {
-    backgroundColor: '#1E1E1E',
-    padding: 18,
-    borderRadius: 15,
-    marginBottom: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF3B30',
+    backgroundColor: colors.input_bg,
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 14,
+    borderLeftWidth: 5,
+    borderLeftColor: colors.danger,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   alertLabel: {
-    color: '#B0B0B0',
-    fontSize: 12,
-    fontWeight: '600',
+    color: colors.secondary_text,
+    fontSize: 13,
+    fontWeight: '700',
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.5,
   },
   alertValue: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
+    color: colors.primary_text,
+    fontSize: 19,
+    fontWeight: '800',
   },
   trackButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.danger,
     padding: 18,
-    borderRadius: 30,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 20,
-    elevation: 5,
-    shadowColor: '#FF3B30',
+    marginTop: 25,
+    shadowColor: colors.danger,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   trackButtonText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  playButton: {
+    backgroundColor: colors.accent,
+    padding: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 15,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  playButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  playButtonActive: {
+    backgroundColor: colors.warning,
+    shadowColor: colors.warning,
+  },
+  playButtonPending: {
+    backgroundColor: colors.input_bg,
+    borderWidth: 1,
+    borderColor: colors.card_border,
+    elevation: 0,
+    shadowOpacity: 0,
   },
   helperText: {
-    color: '#B0B0B0',
+    color: colors.secondary_text,
     fontSize: 14,
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 25,
     fontStyle: 'italic',
+    lineHeight: 20,
   },
-});
+});
+

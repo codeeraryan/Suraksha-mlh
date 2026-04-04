@@ -6,10 +6,10 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
-import React, { useState } from 'react';
-import { useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { SecurityContext } from '../context/securityContext';
 import { db, firebaseAuth } from '../../firebase';
+import { colors } from '../colors';
 
 const AddContactScreen = ({ navigation, route }) => {
   const { setContacts } = useContext(SecurityContext);
@@ -100,32 +100,39 @@ export default AddContactScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#121212',
+    padding: 25,
+    backgroundColor: colors.background_color,
   },
 
   input: {
-    backgroundColor: '#1E1E1E',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 15,
-    fontSize: 14,
-    color: '#fff',
+    backgroundColor: colors.input_bg,
+    padding: 18,
+    borderRadius: 14,
+    marginBottom: 16,
+    fontSize: 16,
+    color: colors.primary_text,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: colors.card_border,
   },
 
   button: {
-    backgroundColor: '#3D5AFE',
-    padding: 15,
-    borderRadius: 12,
+    backgroundColor: colors.accent,
+    padding: 18,
+    borderRadius: 14,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 15,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
 
   buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    color: '#000000',
+    fontWeight: '800',
+    fontSize: 17,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });

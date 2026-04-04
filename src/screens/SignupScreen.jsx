@@ -116,15 +116,17 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 26,
-    color: '#fff',
-    fontWeight: 'bold',
+    fontSize: 28,
+    color: colors.primary_text,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 
   subtitle: {
-    color: '#888',
-    marginTop: 6,
-    fontSize: 14,
+    color: colors.secondary_text,
+    marginTop: 8,
+    fontSize: 15,
+    fontWeight: '400',
   },
 
   form: {
@@ -132,43 +134,53 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    backgroundColor: '#1E1E1E',
-    padding: 15,
-    borderRadius: 12,
-    marginBottom: 14,
-    color: '#fff',
+    backgroundColor: colors.input_bg,
+    padding: 18,
+    borderRadius: 14,
+    marginBottom: 16,
+    color: colors.primary_text,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-
-  signupBtn: {
-    backgroundColor: '#00FFAA',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-
-  signupText: {
-    color: '#000',
-    fontWeight: 'bold',
+    borderColor: colors.card_border,
     fontSize: 16,
   },
 
+  signupBtn: {
+    backgroundColor: colors.accent,
+    padding: 18,
+    borderRadius: 14,
+    alignItems: 'center',
+    marginTop: 15,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+
+  signupText: {
+    color: '#000000',
+    fontWeight: '800',
+    fontSize: 17,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+
   loginLink: {
-    color: '#aaa',
+    color: colors.secondary_text,
     textAlign: 'center',
-    marginTop: 18,
+    marginTop: 25,
+    fontSize: 15,
   },
 
   footer: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 35,
     alignSelf: 'center',
   },
 
   footerText: {
-    color: '#555',
-    fontSize: 12,
+    color: colors.secondary_text,
+    fontSize: 13,
+    opacity: 0.7,
   },
-});
+});

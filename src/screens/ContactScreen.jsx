@@ -47,8 +47,8 @@ const ContactScreen = () => {
         data={contacts}
         keyExtractor={(item) => item.id}
         ListEmptyComponent={() => (
-          <Text style={{ color: "#888", textAlign: "center", marginTop: 50 }}>
-            No contacts yet
+          <Text style={styles.emptyText}>
+            No contacts yet. Tap + to add.
           </Text>
         )}
         renderItem={({ item }) => (
@@ -84,35 +84,49 @@ const styles = StyleSheet.create({
 
   headerContainer: {
     marginTop: 20,
-    marginHorizontal: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#00FFAA",
+    marginHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.card_border,
     alignItems: "center",
+    paddingBottom: 10,
   },
 
   headerText: {
-    fontSize: 20,
-    color: "#fff",
-    fontWeight: "bold",
-    marginBottom: 8,
+    fontSize: 22,
+    color: colors.primary_text,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+
+  emptyText: {
+    color: colors.secondary_text, 
+    textAlign: "center", 
+    marginTop: 80,
+    fontSize: 16,
+    fontWeight: '500',
   },
 
   addBtn: {
-    backgroundColor: "#00FFAA",
-    height: 65,
-    width: 65,
+    backgroundColor: colors.accent,
+    height: 70,
+    width: 70,
     position: "absolute",
-    borderRadius: 50, // ✅ FIXED
+    borderRadius: 35,
     bottom: 100,
-    right: 20,
+    right: 25,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 6,
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
   },
 
   addIcon: {
-    color: "#000",
-    fontSize: 35,
-    fontWeight: "bold",
+    color: "#000000",
+    fontSize: 36,
+    fontWeight: "400",
+    marginTop: -2,
   },
 });

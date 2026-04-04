@@ -6,6 +6,8 @@ import { Alert, Linking, Text, View } from 'react-native';
 import AppStack from './src/navigation/AppStack'
 import AuthStack from './src/navigation/AuthStack'
 import AuthProvider from './src/context/AuthContext'
+import SplashScreen from './src/screens/SplashScreen'
+
 
 
 const App = () => {
@@ -13,6 +15,14 @@ const App = () => {
   const [initializing, setInitializing] = useState(true);
   const sessionStartTime = useRef(new Date().toISOString()).current;
   const shownAlerts = useRef(new Set()).current;
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const time = setTimeout(() => {
+      setIsLoading(false)
+    }, 5000)
+    return () => clearTimeout(time);
+  }, [])
 
   useEffect(() => {
     const user = firebaseAuth.currentUser;
@@ -64,11 +74,9 @@ const App = () => {
     }
   }, []);
 
-  if (initializing) {
+  if (initializing || isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: 'white' }}>
-        <Text style={{ color: "black" }}>Loading...</Text>
-      </View>
+      <SplashScreen />
     );
   }
 

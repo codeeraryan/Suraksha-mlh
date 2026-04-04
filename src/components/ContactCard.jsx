@@ -103,68 +103,89 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: 10,
-    elevation: 6,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    borderRadius: 16,
+    elevation: 3,
     marginBottom: 4,
+    borderWidth: 1,
+    borderColor: colors.card_border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
 
   leftContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '60%',
+    width: '75%',
   },
 
   avatar: {
-    height: 50,
-    width: 50,
-    backgroundColor: 'white',
-    borderRadius: 50,
+    height: 52,
+    width: 52,
+    backgroundColor: '#fff',
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: colors.card_border,
   },
 
   detailsBox: {
-    marginLeft: 10,
+    marginLeft: 15,
   },
 
   nameText: {
-    fontSize: 15,
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '800',
     color: colors.primary_text,
+    letterSpacing: 0.5,
   },
 
   numText: {
     fontWeight: '500',
+    fontSize: 14,
     color: colors.secondary_text,
+    marginTop: 4,
   },
 
   rightContainer: {
-    paddingRight: 15,
     justifyContent: 'center',
+    alignItems: 'flex-end',
+    width: '20%',
   },
 
   optIcon: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.primary_text,
+    color: colors.secondary_text,
   },
 
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
   },
 
   menuBox: {
     position: 'absolute',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingVertical: 5,
+    backgroundColor: colors.input_bg,
+    borderRadius: 14,
+    paddingVertical: 8,
     width: 140,
-    elevation: 8,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: colors.card_border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
   },
 
   menuItem: {
     paddingVertical: 12,
-    paddingHorizontal: 15,
-    fontSize: 14,
+    paddingHorizontal: 18,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary_text,
   },
 });

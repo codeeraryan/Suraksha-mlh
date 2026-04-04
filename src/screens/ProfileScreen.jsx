@@ -122,143 +122,124 @@ const styles = StyleSheet.create({
   /* HEADER */
   headerContainer: {
     marginTop: 20,
-    marginHorizontal: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#00FFAA",
+    marginHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.card_border,
     alignItems: "center",
+    paddingBottom: 10,
   },
 
   headerText: {
-    fontSize: 20,
-    color: "#fff",
-    fontWeight: "bold",
-    marginBottom: 8,
-  },
-
-  /* AUTH UI */
-  authContainer: {
-    marginTop: 80,
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
-
-  authTitle: {
-    fontSize: 24,
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-
-  authSubtitle: {
-    color: '#888',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-
-  loginBtn: {
-    backgroundColor: '#00FFAA',
-    padding: 14,
-    borderRadius: 10,
-    width: '80%',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-
-  signupBtn: {
-    backgroundColor: '#3D5AFE',
-    padding: 14,
-    borderRadius: 10,
-    width: '80%',
-    alignItems: 'center',
-  },
-
-  authBtnText: {
-    color: '#000',
-    fontWeight: 'bold',
+    fontSize: 22,
+    color: colors.primary_text,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
 
   /* PROFILE */
   profileCard: {
     alignItems: 'center',
-    marginTop: 25,
-    marginBottom: 20,
+    marginTop: 30,
+    marginBottom: 25,
   },
 
-  /* Updated Styles */
   avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2,
-    borderColor: '#00FFAA', // Matching your header
-    marginBottom: 10,
-  },
-  card: {
-    backgroundColor: 'rgba(30, 30, 30, 0.8)', // Glass effect
-    marginHorizontal: 15,
-    padding: 15,
-    borderRadius: 12,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: colors.accent,
     marginBottom: 15,
-    borderWidth: 0.2,
-    borderColor: '#333',
+  },
+
+  card: {
+    backgroundColor: colors.card,
+    marginHorizontal: 15,
+    padding: 18,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.card_border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
   },
 
   name: {
     color: colors.primary_text,
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 
   subText: {
     marginTop: 15,
-    color: colors.secondary_text,
-    fontSize: 14,
+    color: colors.accent,
+    fontSize: 15,
+    fontWeight: '700',
   },
 
-
   cardTitle: {
-    color: '#fff',
+    color: colors.primary_text,
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 6,
+    fontWeight: '800',
+    marginBottom: 8,
   },
 
   cardValue: {
-    color: '#B0B0B0',
-    marginBottom: 10,
+    color: colors.secondary_text,
+    marginBottom: 15,
+    fontSize: 15,
   },
 
   /* BUTTONS */
   smallBtn: {
-    backgroundColor: '#00FFAA',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: colors.accent,
+    padding: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
   },
 
   smallBtnText: {
-    color: '#000',
-    fontWeight: 'bold',
+    color: '#000000',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 
   disconnectBtn: {
-    backgroundColor: '#FF3B30',
-    padding: 10,
-    borderRadius: 8,
+    backgroundColor: colors.danger,
+    padding: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
   },
 
   logoutBtn: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: colors.input_bg,
+    borderWidth: 1,
+    borderColor: colors.card_border,
     marginHorizontal: 15,
-    padding: 14,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 14,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 15,
   },
 
   btnText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: colors.primary_text,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-});
+});

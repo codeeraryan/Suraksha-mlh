@@ -4,6 +4,8 @@ import { PermissionsAndroid, Platform, Alert, Linking, NativeModules, AppState }
 import Geolocation from '@react-native-community/geolocation';
 import SendSMS from 'react-native-sms';
 import { db, firebaseAuth } from '../../firebase';
+import AudioRecord from 'react-native-audio-record';
+import RNFS from 'react-native-fs';
 
 export const SecurityContext = createContext();
 const manager = new BleManager();
@@ -11,11 +13,18 @@ const manager = new BleManager();
 export const SecurityProvider = ({ children }) => {
     const [connectedDevice, setConnectedDevice] = useState(null);
     const [isSOSActive, setIsSOSActive] = useState(false);
+    const [isSOSSending, setIsSOSSending] = useState(false); // loader while recording + sending
+    const [sosRecordingCountdown, setSosRecordingCountdown] = useState(10);
     const [isLocationLoading, setIsLocationLoading] = useState(false);
     const [contacts, setContacts] = useState([]);
     const [guardianAlert, setGuardianAlert] = useState(null);
     const subscriptionRef = useRef(null);
     const unsubscribeContactsRef = useRef(null);
+    const activeAlertDocs = useRef([]);
+    const audioChunks = useRef([]);
+    const recordingTimer = useRef(null);
+    const isRecording = useRef(false);
+    const lastNotifiedAlertId = useRef(null);
 
     const BOAT_CHAR = 'fe2c1238-8366-4814-8eb0-01de32100bea';
 
@@ -30,6 +39,7 @@ export const SecurityProvider = ({ children }) => {
                     PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
                     PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
                     PermissionsAndroid.PERMISSIONS.SEND_SMS,
+                    PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
                 ]);
 
                 const locationGranted =
@@ -142,8 +152,19 @@ export const SecurityProvider = ({ children }) => {
                             };
                             console.log("New Guardian Alert received:", alertData.fromUserName);
                             setGuardianAlert(alertData);
+
+                            // Trigger a system alert so they know exactly what happened,
+                            // even if they are on Home or Profile screen.
+                            if (lastNotifiedAlertId.current !== alertData.id) {
+                                lastNotifiedAlertId.current = alertData.id;
+                                Alert.alert(
+                                    "🚨 EMERGENCY ALERT!",
+                                    `${alertData.fromUserName} has requested emergency help.\n\nPlease navigate to the ALERT tab below to view their live location and listen to their voice recording.`
+                                );
+                            }
                         } else {
                             setGuardianAlert(null);
+                            lastNotifiedAlertId.current = null;
                         }
                     }, error => {
                         console.error("Firestore Alert Listener Error:", error);
@@ -175,91 +196,147 @@ export const SecurityProvider = ({ children }) => {
             return;
         }
 
-        // Check permission again (safety)
-        const hasLocation = await PermissionsAndroid.check(
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        );
-        const hasSms = await PermissionsAndroid.check(
-            PermissionsAndroid.PERMISSIONS.SEND_SMS
-        );
+        const hasLocation = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+        const hasSms = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.SEND_SMS);
 
         if (!hasLocation || !hasSms) {
             Alert.alert(
                 "Permission Required",
                 "Please enable Location and SMS permissions to trigger SOS",
                 [
-                    { text: "Open Settings", onPress: () => { Linking.openSettings(); setIsLocationLoading(false); } },
-                    { text: "Cancel", onPress: () => setIsLocationLoading(false) }
+                    { text: "Open Settings", onPress: () => Linking.openSettings() },
+                    { text: "Cancel" }
                 ]
             );
             return;
         }
 
-        setIsSOSActive(true);
+        // ---- STEP 1: Show loading state & request mic permission ----
+        setIsSOSSending(true);
+        setSosRecordingCountdown(10);
 
-        const getAndSendSms = (lat, lon, link) => {
-            const message = link
-                ? `🚨 EMERGENCY: I need help!\nMy Location: ${link}\nCheck SurakshaApp for details.`
-                : `🚨 EMERGENCY: I need help!\n(Location Unavailable)\nPlease check SurakshaApp or try calling.`;
+        let micGranted = false;
+        if (Platform.OS === 'android') {
+            const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.RECORD_AUDIO);
+            micGranted = result === PermissionsAndroid.RESULTS.GRANTED;
+        } else {
+            micGranted = true;
+        }
 
-            for (const contact of contacts) {
-                if (contact.mobile) {
-                    NativeModules.DirectSms.sendDirectSms(contact.mobile, message)
-                        .then(res => console.log(`SMS sent to ${contact.mobile}`))
-                        .catch(err => console.error("SMS Error:", err));
+        // ---- STEP 2: Record 10s audio (Promise-based) ----
+        let base64Audio = null;
+        if (micGranted) {
+            base64Audio = await new Promise((resolve) => {
+                try {
+                    const chunks = [];
+                    AudioRecord.init({
+                        sampleRate: 16000,
+                        channels: 1,
+                        bitsPerSample: 16,
+                        audioSource: 6,
+                        wavFile: 'sos_audio.wav',
+                    });
+                    AudioRecord.on('data', (data) => chunks.push(data));
+                    AudioRecord.start();
+                    console.log('🎙 Recording started...');
+
+                    // Countdown timer
+                    let count = 9;
+                    const countInterval = setInterval(() => {
+                        setSosRecordingCountdown(count);
+                        count--;
+                    }, 1000);
+
+                    setTimeout(async () => {
+                        clearInterval(countInterval);
+                        try {
+                            const audioFilePath = await AudioRecord.stop();
+                            console.log('🎙 Recording stopped. Saved at:', audioFilePath);
+                            
+                            if (audioFilePath) {
+                                // Read the full saved .wav file as a valid base64 string
+                                const fileBase64 = await RNFS.readFile(audioFilePath, 'base64');
+                                resolve(fileBase64);
+                            } else {
+                                resolve(null);
+                            }
+                        } catch (e) {
+                            console.error('Recording stop error:', e);
+                            resolve(null);
+                        }
+                    }, 10000);
+
+                } catch (e) {
+                    console.error('Recording start error:', e);
+                    resolve(null);
                 }
+            });
+        }
 
-                if (contact.isAppUser && contact.linkedUid) {
-                    db.collection('alerts').add({
-                        toUserId: contact.linkedUid,
-                        fromUserId: firebaseAuth.currentUser?.uid,
-                        fromUserName: firebaseAuth.currentUser?.displayName || "SOS User",
-                        latitude: lat || 0,
-                        longitude: lon || 0,
-                        locationLink: link || "unavailable",
-                        status: 'active',
-                        timestamp: new Date().toISOString(),
-                    }).catch(e => console.error("Firestore Alert Error:", e));
-                }
-            }
-        };
-
-        Geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                const locationLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-                getAndSendSms(latitude, longitude, locationLink);
-                Alert.alert("SOS Triggered", "SMS and App Alerts have been sent to your guardians.");
-            },
-            (error) => {
-                console.log("HIGH ACCURACY ERROR:", error);
-                // Fallback to low accuracy
-                Geolocation.getCurrentPosition(
-                    (pos) => {
-                        const { latitude, longitude } = pos.coords;
-                        const link = `https://www.google.com/maps?q=${latitude},${longitude}`;
-                        getAndSendSms(latitude, longitude, link);
-                        Alert.alert("SOS Triggered", "SMS and App Alerts sent (approximate location).");
-                    },
-                    (err) => {
-                        console.log("LOW ACCURACY ERROR:", err);
-                        getAndSendSms(null, null, null);
-                        Alert.alert("Location Issue", "Location failed, but emergency SMS still sent.");
-                    },
+        // ---- STEP 3: Get location (parallel-ready, await after recording) ----
+        const getLocation = () => new Promise((resolve) => {
+            Geolocation.getCurrentPosition(
+                (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+                () => Geolocation.getCurrentPosition(
+                    (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+                    () => resolve(null),
                     { enableHighAccuracy: false, timeout: 15000 }
-                );
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 30000,
-                maximumAge: 10000,
+                ),
+                { enableHighAccuracy: true, timeout: 30000, maximumAge: 10000 }
+            );
+        });
+
+        const location = await getLocation();
+        const locationLink = location
+            ? `https://www.google.com/maps?q=${location.lat},${location.lon}`
+            : null;
+
+        // ---- STEP 4: Send SMS + Firestore alert WITH audio already embedded ----
+        let senderName = firebaseAuth.currentUser?.displayName;
+        if (!senderName && firebaseAuth.currentUser?.uid) {
+            try {
+                const userDoc = await db.collection('users').doc(firebaseAuth.currentUser.uid).get();
+                senderName = userDoc.data()?.name || 'SOS User';
+            } catch (error) {
+                console.error("Error fetching sender name:", error);
+                senderName = 'SOS User';
             }
-        );
+        }
+
+        const message = locationLink
+            ? `🚨 EMERGENCY: I need help!\nMy Location: ${locationLink}\nCheck SurakshaApp for details.`
+            : `🚨 EMERGENCY: I need help!\n(Location Unavailable)\nCheck SurakshaApp or call me!`;
+
+        for (const contact of contacts) {
+            if (contact.mobile) {
+                NativeModules.DirectSms.sendDirectSms(contact.mobile, message)
+                    .catch(err => console.error('SMS Error:', err));
+            }
+            if (contact.isAppUser && contact.linkedUid) {
+                db.collection('alerts').add({
+                    toUserId: contact.linkedUid,
+                    fromUserId: firebaseAuth.currentUser?.uid,
+                    fromUserName: senderName,
+                    latitude: location?.lat || 0,
+                    longitude: location?.lon || 0,
+                    locationLink: locationLink || 'unavailable',
+                    audioData: base64Audio || null, // embedded from the start
+                    status: 'active',
+                    timestamp: new Date().toISOString(),
+                }).catch(e => console.error('Firestore Alert Error:', e));
+            }
+        }
+
+        // ---- STEP 5: All done — show SOS active screen ----
+        setIsSOSSending(false);
+        setIsSOSActive(true);
+        Alert.alert('SOS Sent', 'Emergency alerts have been sent to your guardians.');
     };
 
     // ================= CANCEL SOS =================
     const cancelSOS = () => {
         setIsSOSActive(false);
+        setIsSOSSending(false);
         Alert.alert("Safe", "SOS stopped");
     };
 
@@ -409,6 +486,8 @@ export const SecurityProvider = ({ children }) => {
                 disconnectDevice,
                 isSOSActive,
                 setIsSOSActive,
+                isSOSSending,
+                sosRecordingCountdown,
                 isLocationLoading,
                 triggerSOS,
                 cancelSOS,
