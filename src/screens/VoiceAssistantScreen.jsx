@@ -154,10 +154,20 @@ const VoiceAssistantScreen = ({ navigation }) => {
     if (contacts.length > 0) {
       // Trigger SOS alerts (SMS + Firebase)
       setTimeout(() => triggerSOS(), 500);
+      
+      // Find father contact to pass to fake call
+      let guardianContact = null;
+      if (contacts && contacts.length > 0) {
+          guardianContact = contacts.find(c => c.relation?.toLowerCase() === 'father' || c.name?.toLowerCase().includes('father'));
+          if (!guardianContact) {
+              guardianContact = contacts[0];
+          }
+      }
+      
       // After 2s, launch the fake incoming guardian call
       setTimeout(() => {
         setStatus(STATUS.IDLE);
-        navigation.navigate('FakeCall', { fromSOS: true });
+        navigation.navigate('FakeCall', { fromSOS: true, guardianContact });
       }, 2000);
     } else {
       setTimeout(() => setStatus(STATUS.IDLE), 3000);
@@ -167,13 +177,24 @@ const VoiceAssistantScreen = ({ navigation }) => {
 
   // ─── Fake Call Handler ──────────────────────────────────
   const handleFakeCall = () => {
+    // Find father contact to pass to fake call, or use first contact
+    let guardianContact = null;
+    if (contacts && contacts.length > 0) {
+        // Try to find father in contacts
+        guardianContact = contacts.find(c => c.relation?.toLowerCase() === 'father' || c.name?.toLowerCase().includes('father'));
+        // If no father, use first contact
+        if (!guardianContact) {
+            guardianContact = contacts[0];
+        }
+    }
+
     const reply = "Triggering a fake incoming call for you right now. Stay safe!";
     addMessage('ai', reply);
     setStatus(STATUS.SPEAKING);
     VoiceService.speak(reply, language);
     setTimeout(() => {
       setStatus(STATUS.IDLE);
-      navigation.navigate('FakeCall');
+      navigation.navigate('FakeCall', { guardianContact });
     }, 1500);
   };
 
@@ -181,13 +202,22 @@ const VoiceAssistantScreen = ({ navigation }) => {
   const handleAIQuery = async text => {
     setStatus(STATUS.PROCESSING);
     try {
+      console.log('🤖 Processing AI query:', text);
       const reply = await VoiceService.askGemini(text, location);
+      
+      if (!reply || reply.trim() === '') {
+        throw new Error('Empty response from AI');
+      }
+      
       addMessage('ai', reply);
       setStatus(STATUS.SPEAKING);
       VoiceService.speak(reply, language);
       setTimeout(() => setStatus(STATUS.IDLE), 500);
     } catch (e) {
-      const fallback = "I couldn't process that. Please try again.";
+      console.error('❌ AI Query Error:', e.message);
+      const fallback = language === 'hi-IN' 
+        ? "मुझे समझने में परेशानी हुई। फिर से कोशिश करें।"
+        : "I couldn't process that. Please try again.";
       addMessage('ai', fallback);
       VoiceService.speak(fallback, language);
       setStatus(STATUS.IDLE);

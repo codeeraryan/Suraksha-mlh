@@ -22,16 +22,63 @@ const CALLERS = [
 ];
 
 // ─── Guardian voice messages (TTS "recorded voice") ───────
-const GUARDIAN_SCRIPT = [
-  'Hello beta, I got your SOS alert. Are you okay? I am coming to you right now, please stay where you are.',
-  'Do not worry. You are safe. I am on my way. If someone is troubling you, just stay on the call.',
-  'Police ko bhi call kar diya hai. Please wahan rukiye. Main bahut jaldi pahunch rahi hoon.',
-  'You are not alone. Keep calm. I am almost there, just few minutes away.',
-];
+// Dynamic messages based on guardian relation
+const getGuardianScript = (relation = 'Father') => {
+  const relationName = relation || 'Father';
+  const scripts = {
+    Father: [
+      'Beta, I got your emergency alert. Are you safe? Tell me what happened.',
+      'Do not worry, I am coming to you right now. Stay where you are and keep calm.',
+      'Police and ambulance are also on the way. Just stay safe and keep me updated.',
+      'You are not alone. I am almost there. Please keep this phone line open.',
+    ],
+    Mother: [
+      'Beta, I got your SOS. Are you okay? Where are you right now?',
+      'Don\'t worry my dear, I am on my way. Stay safe and keep calm.',
+      'I have called the authorities. Just stay where you are and keep talking to me.',
+      'You are my priority. I\'ll reach you soon. Keep this call active.',
+    ],
+    Brother: [
+      'Hey, I got your alert. What\'s wrong? Are you in danger?',
+      'Stay calm! I\'m heading to you right now. Don\'t go anywhere.',
+      'I\'ve alerted the authorities too. Just hang in there.',
+      'I\'m almost there buddy. Keep the line open and stay safe.',
+    ],
+    Friend: [
+      'Hey! I got your SOS. Where are you? What\'s happening?',
+      'I\'m coming to you immediately! Just stay safe and keep calm.',
+      'I\'ve called emergency services too. Hold on!',
+      'I\'m on my way! Keep this call going.',
+    ],
+  };
+  return scripts[relationName] || scripts['Father'];
+};
+
+// TTS parameters based on gender/relation to mimic different voices
+const getVoiceParams = (relation = 'Father') => {
+  const params = {
+    Father: { rate: 0.42, pitch: 0.95 },      // Deeper voice, slightly slower
+    Mother: { rate: 0.46, pitch: 1.15 },      // Slightly higher, normal speed
+    Brother: { rate: 0.45, pitch: 1.05 },     // Medium voice
+    Friend: { rate: 0.48, pitch: 1.10 },      // Lighter, faster
+  };
+  return params[relation] || params['Father'];
+};
 
 const FakeCallScreen = ({ navigation, route }) => {
   const fromSOS = route?.params?.fromSOS ?? false;
-  const caller = CALLERS[Math.floor(Math.random() * CALLERS.length)];
+  const guardianContact = route?.params?.guardianContact ?? null;
+  
+  // If no guardian contact passed, use Father as default
+  const caller = guardianContact || { 
+    name: 'Father 💪', 
+    number: '+91 XXXXXXXXXX', 
+    relation: 'Father' 
+  };
+  
+  // Get the appropriate guardian script and voice parameters
+  const GUARDIAN_SCRIPT = getGuardianScript(caller.relation || 'Father');
+  const voiceParams = getVoiceParams(caller.relation || 'Father');
 
   const [phase, setPhase] = useState(fromSOS ? 'ringing' : 'ringing'); // ringing | active | ended
   const [callDuration, setCallDuration] = useState(0);
@@ -45,12 +92,14 @@ const FakeCallScreen = ({ navigation, route }) => {
 
   // ─── On mount: always start ringing ─────────────────────
   useEffect(() => {
+    console.log(`📞 FakeCallScreen mounted - fromSOS: ${fromSOS}, guardian: ${caller.relation}`);
     startRinging();
     let autoTimer = null;
 
     if (fromSOS) {
-      // Auto-answer after 3 seconds when triggered by SOS
+      // Auto-answer after 3 seconds when triggered by SOS for faster guardian connection
       autoTimer = setTimeout(() => {
+        console.log('⏱️ Auto-answering FakeCall after SOS...');
         stopEverything(); // stop ring/vibrate
         setPhase('active');
       }, 3000);
@@ -60,6 +109,7 @@ const FakeCallScreen = ({ navigation, route }) => {
     return () => {
       if (autoTimer) clearTimeout(autoTimer);
       stopEverything();
+      console.log('🧹 FakeCallScreen unmounted');
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -114,8 +164,10 @@ const FakeCallScreen = ({ navigation, route }) => {
     setIsSpeaking(true);
     Tts.stop();
     Tts.setDefaultLanguage('en-US');
-    Tts.setDefaultRate(0.44);
-    Tts.setDefaultPitch(1.15);
+    // Use guardian-specific voice parameters
+    Tts.setDefaultRate(voiceParams.rate);
+    Tts.setDefaultPitch(voiceParams.pitch);
+    console.log(`🔊 Playing guardian message (${caller.relation}):`, GUARDIAN_SCRIPT[index]);
     Tts.speak(GUARDIAN_SCRIPT[index]);
   };
 
@@ -135,11 +187,38 @@ const FakeCallScreen = ({ navigation, route }) => {
   };
 
   const stopEverything = () => {
-    Vibration.cancel();
-    if (ringLoopRef.current) ringLoopRef.current.stop();
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (scriptTimerRef.current) clearTimeout(scriptTimerRef.current);
-    Tts.stop();
+    try {
+      Vibration.cancel();
+      console.log('✓ Vibration stopped');
+    } catch (e) {
+      console.warn('Error stopping vibration:', e);
+    }
+
+    try {
+      if (ringLoopRef.current) {
+        ringLoopRef.current.stop();
+        console.log('✓ Ring animation stopped');
+      }
+    } catch (e) {
+      console.warn('Error stopping animation:', e);
+    }
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      console.log('✓ Call duration timer cleared');
+    }
+
+    if (scriptTimerRef.current) {
+      clearTimeout(scriptTimerRef.current);
+      console.log('✓ Script timer cleared');
+    }
+
+    try {
+      Tts.stop();
+      console.log('✓ TTS stopped');
+    } catch (e) {
+      console.warn('Error stopping TTS:', e);
+    }
   };
 
   // ─── Answer call (manual tap) ──────────────────────────

@@ -38,9 +38,20 @@ const SOSScreen = ({ navigation }) => {
         // 1. Send SOS alerts
         triggerSOS();
 
-        // 2. After 1.5 seconds, launch Fake Call screen with guardian voice
+        // 2. Find father contact to pass to fake call, or use first contact
+        let guardianContact = null;
+        if (contacts && contacts.length > 0) {
+            // Try to find father in contacts
+            guardianContact = contacts.find(c => c.relation?.toLowerCase() === 'father' || c.name?.toLowerCase().includes('father'));
+            // If no father, use first contact
+            if (!guardianContact) {
+                guardianContact = contacts[0];
+            }
+        }
+
+        // 3. After 1.5 seconds, launch Fake Call screen with guardian voice
         fakeCallTimerRef.current = setTimeout(() => {
-            navigation.navigate('FakeCall', { fromSOS: true });
+            navigation.navigate('FakeCall', { fromSOS: true, guardianContact });
         }, 1500);
     };
 

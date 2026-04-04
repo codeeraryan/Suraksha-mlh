@@ -96,7 +96,13 @@ export const SecurityProvider = ({ children }) => {
     // ================= SOS FUNCTION =================
     const triggerSOS = async () => {
         if (contacts.length === 0) {
-            Alert.alert("No Contacts", "Please add emergency contacts first.");
+            Alert.alert("⚠️ No Contacts", "Please add emergency contacts first to enable SOS.");
+            return;
+        }
+
+        // Don't trigger duplicate SOS if already active
+        if (isSOSActive) {
+            console.log("⚠️ SOS already active - ignoring duplicate trigger");
             return;
         }
 
@@ -110,8 +116,8 @@ export const SecurityProvider = ({ children }) => {
 
         if (!hasLocation || !hasSms) {
             Alert.alert(
-                "Permission Required",
-                "Please enable Location and SMS permissions to trigger SOS",
+                "⚠️ Permission Required",
+                "Location and SMS permissions are needed for SOS to work properly.",
                 [
                     { text: "Open Settings", onPress: () => Linking.openSettings() },
                     { text: "Cancel" }
@@ -120,88 +126,109 @@ export const SecurityProvider = ({ children }) => {
             return;
         }
 
+        console.log('🚨 SOS TRIGGERED - Sending alerts to', contacts.length, 'contacts');
         setIsSOSActive(true);
 
-        Geolocation.getCurrentPosition(
-            async (position) => { // Make this async to handle Firestore writes
-                const { latitude, longitude } = position.coords;
-                const locationLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
-
-                const message = `🚨 EMERGENCY: I need help!\nMy Location: ${locationLink}\nCheck SurakshaApp for details.`;
-
-                // 1. Handle SMS and App Alerts for each contact
-                for (const contact of contacts) {
-                    // --- CHANNEL 1: Direct SMS ---
-                    if (contact.mobile) {
-                        NativeModules.DirectSms.sendDirectSms(contact.mobile, message)
-                            .then(res => console.log(`SMS sent to ${contact.mobile}`))
-                            .catch(err => console.error("SMS Error:", err));
-                    }
-
-                    // --- CHANNEL 2: In-App Alert (Firebase) ---
-                    if (contact.isAppUser && contact.linkedUid) {
-                        try {
-                            await db.collection('alerts').add({
-                                toUserId: contact.linkedUid,
-                                fromUserId: firebaseAuth.currentUser.uid,
-                                fromUserName: userData?.name || "User",
-                                fromUserPhone: userData?.mobile || "",
-                                latitude,
-                                longitude,
-                                locationLink,
-                                status: 'active',
-                                timestamp: new Date().toISOString(),
-                            });
-                            console.log(`In-app alert sent to ${contact.name}`);
-                        } catch (e) {
-                            console.error("Firestore Alert Error:", e);
-                        }
+        // Helper function to send SMS with retry
+        const sendSmsWithRetry = async (phoneNumber, message, retries = 2) => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const result = await NativeModules.DirectSms.sendDirectSms(phoneNumber, message);
+                    console.log(`✅ SMS sent to ${phoneNumber}:`, result);
+                    return true;
+                } catch (err) {
+                    console.error(`❌ SMS attempt ${i + 1} failed for ${phoneNumber}:`, err);
+                    if (i < retries - 1) {
+                        // Wait 500ms before retry
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     }
                 }
+            }
+            return false;
+        };
 
-                Alert.alert("SOS Triggered", "SMS and App Alerts have been sent to your guardians.");
+        Geolocation.getCurrentPosition(
+            async (position) => {
+                try {
+                    const { latitude, longitude } = position.coords;
+                    const locationLink = `https://www.google.com/maps?q=${latitude},${longitude}`;
+                    const message = `🚨 EMERGENCY: I need help!\n📍 My Location: ${locationLink}\n\nPlease check SurakshaApp for more details.`;
+
+                    console.log('📍 Location obtained:', latitude, longitude);
+                    let smsSentCount = 0;
+                    let alertsSentCount = 0;
+
+                    // Send alerts to each contact
+                    for (const contact of contacts) {
+                        try {
+                            // --- CHANNEL 1: Direct SMS ---
+                            if (contact.mobile) {
+                                const smsSent = await sendSmsWithRetry(contact.mobile, message);
+                                if (smsSent) smsSentCount++;
+                            }
+
+                            // --- CHANNEL 2: In-App Alert (Firebase) ---
+                            if (contact.isAppUser && contact.linkedUid && firebaseAuth.currentUser?.uid) {
+                                try {
+                                    await db.collection('alerts').add({
+                                        toUserId: contact.linkedUid,
+                                        fromUserId: firebaseAuth.currentUser.uid,
+                                        fromUserName: firebaseAuth.currentUser?.displayName || "User",
+                                        fromUserPhone: firebaseAuth.currentUser?.phoneNumber || "",
+                                        latitude,
+                                        longitude,
+                                        locationLink,
+                                        status: 'active',
+                                        timestamp: new Date().toISOString(),
+                                    });
+                                    console.log(`✅ In-app alert sent to ${contact.name}`);
+                                    alertsSentCount++;
+                                } catch (e) {
+                                    console.error(`❌ Firebase alert error for ${contact.name}:`, e.message);
+                                }
+                            }
+                        } catch (e) {
+                            console.error(`❌ Error processing contact ${contact.name}:`, e);
+                        }
+                    }
+
+                    console.log(`📊 SOS Alerts Sent - SMS: ${smsSentCount}, In-App: ${alertsSentCount}`);
+                    Alert.alert(
+                        "🚨 SOS Activated",
+                        `Emergency alerts sent to ${smsSentCount} contacts via SMS and ${alertsSentCount} via app.`
+                    );
+                } catch (error) {
+                    console.error('❌ Error in SOS with location:', error);
+                    Alert.alert('Error', 'Failed to process SOS with location');
+                }
             },
 
             async (error) => {
-                console.log("LOCATION ERROR:", error);
+                try {
+                    console.warn("📍 Location error:", error.message);
+                    const message = `🚨 EMERGENCY: I need help! (Location unavailable)\n\nPlease visit SurakshaApp for more details.`;
+                    let smsSentCount = 0;
 
-                // 🔥 fallback message if location fails
-                const message = `🚨 I am in danger. Please help! (Location unavailable), for more details : visit our surakhaApp`;
-
-
-                for (const contact of contacts) {
-                    // --- CHANNEL 1: Direct SMS ---
-                    if (contact.mobile) {
-                        NativeModules.DirectSms.sendDirectSms(contact.mobile, message)
-                            .then(res => console.log(`SMS sent to ${contact.mobile}`))
-                            .catch(err => console.error("SMS Error:", err));
-                    }
-
-                    // --- CHANNEL 2: In-App Alert (Firebase) ---
-                    if (contact.isAppUser && contact.linkedUid) {
+                    // Still send alerts even if location failed
+                    for (const contact of contacts) {
                         try {
-                            await db.collection('alerts').add({
-                                toUserId: contact.linkedUid,
-                                fromUserId: firebaseAuth.currentUser.uid,
-                                fromUserName: userData?.name || "User",
-                                fromUserPhone: userData?.mobile || "",
-                                latitude,
-                                longitude,
-                                locationLink,
-                                status: 'active',
-                                timestamp: new Date().toISOString(),
-                            });
-                            console.log(`In-app alert sent to ${contact.name}`);
+                            if (contact.mobile) {
+                                const smsSent = await sendSmsWithRetry(contact.mobile, message);
+                                if (smsSent) smsSentCount++;
+                            }
                         } catch (e) {
-                            console.error("Firestore Alert Error:", e);
+                            console.error(`❌ SMS error for ${contact.name}:`, e);
                         }
                     }
-                }
 
-                Alert.alert(
-                    "Location Issue",
-                    "Location failed, but SOS message still sent."
-                );
+                    Alert.alert(
+                        "⚠️ Location Issue",
+                        `SOS sent to ${smsSentCount} contacts, but location couldn't be obtained.`
+                    );
+                } catch (error) {
+                    console.error('❌ Error in SOS fallback:', error);
+                    Alert.alert('Error', 'Failed to send SOS alerts');
+                }
             },
 
             {
@@ -221,8 +248,10 @@ export const SecurityProvider = ({ children }) => {
     const sendLocation = async () => {
         try {
             setIsLocationLoading(true);
+            
             if (contacts.length === 0) {
-                Alert.alert("No Contacts", "Please add emergency contacts first.");
+                Alert.alert("⚠️ No Contacts", "Please add emergency contacts first.");
+                setIsLocationLoading(false);
                 return;
             }
 
@@ -236,60 +265,59 @@ export const SecurityProvider = ({ children }) => {
 
             if (!hasLocation || !hasSms) {
                 Alert.alert(
-                    "Permission Required",
-                    "Please enable Location and SMS permissions to trigger SOS",
+                    "⚠️ Permission Required",
+                    "Location and SMS permissions are needed to share location.",
                     [
                         { text: "Open Settings", onPress: () => Linking.openSettings() },
                         { text: "Cancel" }
                     ]
                 );
+                setIsLocationLoading(false);
                 return;
             }
 
+            console.log('📍 Sharing location with', contacts.length, 'contacts');
+
             Geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
+                async (position) => {
+                    try {
+                        const { latitude, longitude } = position.coords;
+                        const locationLink = `https://maps.google.com/?q=${latitude},${longitude}`;
+                        const message = `📍 I'm sharing my live location for safety.\n\nView on Maps: ${locationLink}\n\nFor more details, check SurakshaApp.`;
 
-                    const locationLink = `https://maps.google.com/?q=${latitude},${longitude}`;
+                        console.log('📍 Location obtained:', latitude, longitude);
+                        let smsSentCount = 0;
 
+                        for (const contact of contacts) {
+                            if (contact.mobile) {
+                                try {
+                                    const result = await NativeModules.DirectSms.sendDirectSms(contact.mobile, message);
+                                    console.log(`✅ Location SMS sent to ${contact.name}:`, result);
+                                    smsSentCount++;
+                                } catch (err) {
+                                    console.error(`❌ Failed to send location SMS to ${contact.name}:`, err);
+                                }
+                            }
+                        }
 
-
-                    const message = `I am sharing my current location with you for safety.
-            View on Maps: ${locationLink}. , for more details : visit our surakhaApp`;
-
-                    console.log(message);
-
-                    const numbers = contacts.map(c => c.mobile);
-                    console.log(numbers);
-
-                    for (const number of numbers) {
-                        NativeModules.DirectSms.sendDirectSms(number, message)
-                            .then(res => console.log("Direct SMS:", res))
-                            .catch(err => console.error("Direct SMS Error:", err));
+                        setIsLocationLoading(false);
+                        Alert.alert(
+                            "✅ Location Shared",
+                            `Your location has been sent to ${smsSentCount} contacts.`
+                        );
+                    } catch (error) {
+                        console.error('❌ Error processing location:', error);
+                        setIsLocationLoading(false);
+                        Alert.alert('Error', 'Failed to share location');
                     }
-
-                    setIsLocationLoading(false);
-                    Alert.alert("Success", "location sent to the saved contacts")
                 },
 
-
                 (error) => {
-                    console.log("LOCATION ERROR:", error);
-
-                    // 🔥 fallback message if location fails
-                    const message = `i have sent my current location to you on suraksha app`;
-                    const numbers = contacts.map(c => c.mobile);
-
-                    for (const number of numbers) {
-                        NativeModules.DirectSms.sendDirectSms(number, message)
-                            .then(res => console.log("Direct SMS:", res))
-                            .catch(err => console.error("Direct SMS Error:", err));
-                    }
-
+                    console.warn("📍 Location error:", error.message);
                     setIsLocationLoading(false);
                     Alert.alert(
-                        "Location Issue",
-                        "Location failed, but message sent to visit our app."
+                        "⚠️ Location Failed",
+                        "Unable to get your current location. Please enable location services and try again."
                     );
                 },
 
@@ -300,11 +328,11 @@ export const SecurityProvider = ({ children }) => {
                 }
             );
         } catch (error) {
+            console.error('❌ Error in sendLocation:', error);
             setIsLocationLoading(false);
-            Alert.alert("Error", error.message);
-            console.log(error);
+            Alert.alert("Error", error.message || "Failed to share location");
         }
-    }
+    };
 
     // ================= BLE MONITOR =================
     const monitorDevice = async (device) => {

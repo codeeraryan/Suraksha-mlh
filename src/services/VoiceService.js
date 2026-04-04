@@ -51,17 +51,25 @@ class VoiceService {
         Tts.setDefaultLanguage('en-US');
         Tts.setDefaultRate(0.48);
         Tts.setDefaultPitch(1.05);
+        console.log('TTS initialized successfully');
       })
       .catch(err => console.warn('TTS init error:', err));
 
     Tts.addEventListener('tts-start', () => {
       this.isSpeaking = true;
+      console.log('TTS: Speaking started');
     });
     Tts.addEventListener('tts-finish', () => {
       this.isSpeaking = false;
+      console.log('TTS: Speaking finished');
     });
     Tts.addEventListener('tts-cancel', () => {
       this.isSpeaking = false;
+      console.log('TTS: Speaking cancelled');
+    });
+    Tts.addEventListener('tts-error', (err) => {
+      this.isSpeaking = false;
+      console.error('TTS Error:', err);
     });
   }
 
@@ -192,10 +200,11 @@ class VoiceService {
   // GEMINI AI QUERY
   // ─────────────────────────────────────────────
   async askGemini(text, location = null) {
-    // Offline fallback keywords
+    // Offline fallback for emergency keywords
     const lower = text.toLowerCase();
     const isEmergency = SOS_KEYWORDS.some(k => lower.includes(k));
     if (isEmergency) {
+      console.log('🚨 Emergency keywords detected - immediate SOS response');
       return 'You seem to be in danger. I have detected emergency keywords. Please use the SOS button immediately!';
     }
 
@@ -205,31 +214,40 @@ class VoiceService {
       const isHindi = /[\u0900-\u097F]/.test(text);
       const langLabel = isHindi ? 'Hindi' : 'English';
       const locationCtx = location
-        ? `User location: Latitude ${location.latitude}, Longitude ${location.longitude}.`
-        : 'Location is unavailable.';
+        ? `User location: Latitude ${location.latitude.toFixed(4)}, Longitude ${location.longitude.toFixed(4)}.`
+        : 'Location data is unavailable.';
 
       const prompt = `You are "Suraksha AI", a specialized women's safety assistant embedded in a mobile safety app called Suraksha.
 
-Role:
-- Provide calm, empathetic, and actionable safety advice.
-- If the user seems to be in danger, respond urgently and tell them to press the SOS button.
-- If asked about safety of a place, provide general safety awareness based on the location context.
-- Keep responses to 2-3 sentences maximum — they will be spoken aloud via Text-to-Speech.
-- Respond in ${langLabel}. Always match the user's language.
+Role & Guidelines:
+- Provide calm, empathetic, and actionable safety advice in 1-2 sentences maximum (will be spoken via TTS)
+- If the user seems to be in potential danger, respond urgently and suggest they press the SOS button
+- For location/area safety queries, provide general safety awareness tips
+- Always respond in the user's language (${langLabel})
+- Be concise and avoid technical jargon
+- When uncertain, ask clarifying questions briefly
 
 ${locationCtx}
 
-User said: "${text}"`;
+User's spoken message: "${text}"
+
+Response:`;
 
       const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
+      const response = result.response;
+      const responseText = response.text();
+      
+      console.log('✅ Gemini API response:', responseText);
+      return responseText;
     } catch (error) {
-      console.error('Gemini Error:', error);
+      console.error('❌ Gemini Error:', error.message);
+      
+      // Better fallback responses
       const isHindi = /[\u0900-\u097F]/.test(text);
-      return isHindi
-        ? 'मुझे अभी कनेक्ट करने में दिक्कत हो रही है। अगर आप खतरे में हैं तो SOS बटन दबाएं।'
-        : "I'm having trouble connecting right now. If you're in danger, please press the SOS button immediately.";
+      if (isHindi) {
+        return 'मुझे अभी जवाब देने में परेशानी हो रही है। अगर आपको तुरंत मदद चाहिए तो SOS बटन दबाएं।';
+      }
+      return "I'm having difficulty right now, but I'm here to help. If you need emergency help, please press the SOS button.";
     }
   }
 
@@ -237,27 +255,61 @@ User said: "${text}"`;
   // TTS SPEAK
   // ─────────────────────────────────────────────
   speak(text, language = 'en-US') {
-    Tts.stop();
-    const isHindi = language.startsWith('hi') || /[\u0900-\u097F]/.test(text);
-    Tts.setDefaultLanguage(isHindi ? 'hi-IN' : 'en-US');
-    Tts.speak(text);
+    if (!text || text.trim() === '') {
+      console.warn('⚠️ Attempted to speak empty text');
+      return;
+    }
+
+    try {
+      Tts.stop();
+      
+      // Detect language from text if Hindi script is present
+      const isHindi = /[\u0900-\u097F]/.test(text);
+      const effectiveLanguage = isHindi ? 'hi-IN' : (language || 'en-US');
+      
+      Tts.setDefaultLanguage(effectiveLanguage);
+      Tts.setDefaultRate(0.48);
+      Tts.setDefaultPitch(1.05);
+      
+      console.log(`🔊 Speaking (${effectiveLanguage}): ${text.substring(0, 50)}...`);
+      Tts.speak(text);
+    } catch (error) {
+      console.error('❌ TTS Error:', error);
+    }
   }
 
   stopSpeaking() {
-    Tts.stop();
+    try {
+      Tts.stop();
+      this.isSpeaking = false;
+      console.log('🔇 Speaking stopped');
+    } catch (error) {
+      console.error('Error stopping speech:', error);
+    }
   }
 
   // ─────────────────────────────────────────────
   // CLEANUP
   // ─────────────────────────────────────────────
   destroy() {
-    this._onSpeechStart = null;
-    this._onSpeechEnd = null;
-    this._onSpeechResults = null;
-    this._onSpeechPartialResults = null;
-    this._onSpeechError = null;
-    Voice.destroy().then(Voice.removeAllListeners).catch(console.error);
-    Tts.stop();
+    try {
+      console.log('🧹 Cleaning up VoiceService...');
+      this._onSpeechStart = null;
+      this._onSpeechEnd = null;
+      this._onSpeechResults = null;
+      this._onSpeechPartialResults = null;
+      this._onSpeechError = null;
+      
+      Voice.destroy().then(() => {
+        Voice.removeAllListeners();
+        console.log('✅ Voice listeners removed');
+      }).catch(err => console.warn('Voice cleanup error:', err));
+      
+      Tts.stop();
+      console.log('✅ TTS stopped');
+    } catch (error) {
+      console.error('❌ Error during cleanup:', error);
+    }
   }
 }
 
