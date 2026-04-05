@@ -4,6 +4,12 @@
   <p>Built for Hackathons | Empowering Safety Through Technology</p>
 </div>
 
+
+https://github.com/user-attachments/assets/6fdf07e1-5634-47c7-9839-afc9eae53e1c
+
+
+
+
 <br />
 
 **Suraksha** is a comprehensive, multi-layered women’s safety application built with React Native. It pushes the boundaries of standard emergency apps by combining **Hardware Integration (BLE)**, **Offline ML Voice Recognition**, and **Generative AI** into an accessible consumer application.
