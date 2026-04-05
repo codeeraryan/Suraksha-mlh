@@ -24,6 +24,7 @@
     "react": "19.2.3",
     "react-native": "0.84.1",
     "react-native-audio-record": "^0.2.2",
+    "react-native-background-actions": "^4.0.1",
     "react-native-ble-manager": "^12.4.4",
     "react-native-ble-plx": "^3.5.1",
     "react-native-fs": "^2.20.0",

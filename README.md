@@ -1,100 +1,93 @@
-# Suraksha_mlh
+<div align="center">
+  <h1>🛡️ Suraksha</h1>
+  <p><strong>Advanced Women's Safety Companion App</strong></p>
+  <p>Built for Hackathons | Empowering Safety Through Technology</p>
+</div>
 
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+<br />
 
-# Getting Started
+**Suraksha** is a comprehensive, multi-layered women’s safety application built with React Native. It pushes the boundaries of standard emergency apps by combining **Hardware Integration (BLE)**, **Offline ML Voice Recognition**, and **Generative AI** into an accessible consumer application.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+Our mission is to ensure that requesting emergency help is frictionless, immediate, and heavily documented in order to protect women and prevent escalation in threatening environments.
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 🌟 The "Wow" Factor: Key Features
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+### 1. 🚨 Triple-Tier SOS Triggering
+In dangerous situations, reaching for a phone and unlocking it isn't always possible. Suraksha supports triggering an emergency alert through 3 distinct methods:
+- **🗣️ Offline Voice Wake-Word:** Embedded ML (Vosk) continuously listens in the background. Simply yelling **"Help"** triggers the SOS instantly—no internet required to process the speech!
+- **🔘 Hardware BLE Integration:** Connect a compatible Bluetooth Low Energy ring or button. A simple discreet click on the physical hardware will secretly trigger the SOS protocol.
+- **📱 On-Screen SOS Button:** A massive, easily accessible red button on the app's main dashboard.
 
-```sh
-# Using npm
-npm start
+### 2. 🎙️ Automatic Audio Evidence Collection
+As soon as an SOS is activated, the app initiates a covert **10-second background audio recording**. This file is converted to Base64 and embedded directly within the emergency alert packet, providing authorities and guardians with crucial, real-time contextual evidence.
 
-# OR using Yarn
-yarn start
-```
+### 3. ☁️ Real-time Guardian Network
+When an SOS is dispatched, it fires off in multiple ways simultaneously:
+- **Direct SMS Fallback:** Instantly sends SMS texts to emergency contacts containing an SOS message and a Google Maps tracking link.
+- **Firebase Real-Time Prompts:** If guardians have the app installed, a live Firebase Firestore listener interrupts whatever they are doing on their phone with an unmissable in-app prompt and alert, showing them the victim's location and audio evidence.
 
-## Step 2: Build and run your app
+### 4. 🧠 Gemini AI-Powered Safety Tips
+Through a robust integration with **Google Gemini Pro**, the app generates dynamic, randomized, and context-aware safety tips directly on the home dashboard. This helps users stay vigilant by ingesting up-to-date, practical safety guidelines without developer hardcoding.
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### 5. 👻 Background Execution
+The app utilizes robust background services to remain completely active when your phone is locked or minimized. Voice detection and BLE connection statuses persist seamlessly without draining immense battery power.
 
-### Android
+### 6. 📱 Fake Call & Utility Suite
+Suraksha also includes preventative tools! Navigate to the Fake Call utility to instantly simulate a realistic incoming phone call, offering an easy and universally accepted excuse to walk away from uncomfortable situations.
 
-```sh
-# Using npm
-npm run android
+---
 
-# OR using Yarn
-yarn android
-```
+## 💻 Tech Stack
 
-### iOS
+- **Frontend:** React Native (v0.84.1) & React Navigation.
+- **Backend & Cloud:** Firebase (Auth, Firestore, Cloud Firestore, Realtime Database) for seamless multi-user live synchronization.
+- **Machine Learning (Voice):** `react-native-vosk` for complete offline offline STT (Speech-to-Text) wake word detection.
+- **Hardware Integrations:** `react-native-ble-plx` and `react-native-ble-manager` for communicating natively with connected Bluetooth Low Energy wearables.
+- **Generative AI:** Google Gemini API (`generativelanguage.googleapis.com`) integration.
+- **Hardware APIs:** `@react-native-community/geolocation`, `react-native-audio-record`, `react-native-sms`, and `react-native-fs`.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+---
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+## 📁 Project Architecture
 
-```sh
-bundle install
-```
+- `/src/screens/` - Contains all primary UI views (`SOSScreen.jsx`, `AlertScreen.jsx`, `FakeCallScreen.jsx`, etc.)
+- `/src/context/` - `securityContext.js` is the heartbeat of Suraksha. It manages Bluetooth state monitoring, Voice Detection background threads, Firebase listener updates, Permissions, and Audio Chunking logic.
+- `/src/navigation/` - Secure Stack and Tab routing separating Auth wrappers from the main app interface. 
+- `/firebase.js` - Central setup linking up the Google services configs.
 
-Then, and every time you update your native dependencies, run:
+---
 
-```sh
-bundle exec pod install
-```
+## 🚀 Getting Started
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+### Prerequisites
+- Node.js (v22+ required based on engine specs)
+- Java Development Kit (JDK 17+)
+- Android Studio & Android SDK (For Android emulation/compilation)
 
-```sh
-# Using npm
-npm run ios
+### Installation
+1. Clone the repository and install dependencies:
+   ```sh
+   npm install
+   ```
 
-# OR using Yarn
-yarn ios
-```
+2. Start the Metro Bundler:
+   ```sh
+   npm start
+   ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+3. Launch the Application:
+   *We heavily recommend running on a Physical Android Device to test BLE, SMS, and Microphone integrations properly.*
+   ```sh
+   npm run android
+   ```
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+*(Note: Ensure you have granted Location, Microphone, and Bluetooth permissions when prompted to fully utilize the SOS Context).*
 
-## Step 3: Modify your app
+---
 
-Now that you have successfully run the app, let's make changes!
+## 🏆 Why this matters for Hackathons
+Suraksha is not just a CRUD application. It intersects **Hardware (IoT)**, **Artificial Intelligence (GenAI & Offline ML)**, and **Cloud-Synchronized Mobile Development** simultaneously. The code tackles very complex mobile edge cases like backgrounding, byte recording formats, hardware permissions, and instantaneous network distribution, wrapping it all into an aesthetically pleasing and potentially life-saving package.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
-# Suraksha-mlh
+*Stay safe. Stay connected. With Suraksha.*
