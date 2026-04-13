@@ -1,7 +1,7 @@
 <div align="center">
   <h1>🛡️ Suraksha</h1>
   <p><strong>Advanced Women's Safety Companion App</strong></p>
-  <p>Built for Hackathons | Empowering Safety Through Technology</p>
+  <p>Empowering Safety Through Technology</p>
 </div>
 
 
@@ -19,7 +19,7 @@ Our mission is to ensure that requesting emergency help is frictionless, immedia
 
 ---
 
-## 🌟 The "Wow" Factor: Key Features
+## 🌟 Key Features
 
 ### 1. 🚨 Triple-Tier SOS Triggering
 In dangerous situations, reaching for a phone and unlocking it isn't always possible. Suraksha supports triggering an emergency alert through 3 distinct methods:
@@ -90,11 +90,9 @@ Suraksha also includes preventative tools! Navigate to the Fake Call utility to 
    npm run android
    ```
 
-*(Note: Ensure you have granted Location, Microphone, and Bluetooth permissions when prompted to fully utilize the SOS Context).*
 
 ---
 
-## 🏆 Why this matters for Hackathons
 Suraksha is not just a CRUD application. It intersects **Hardware (IoT)**, **Artificial Intelligence (GenAI & Offline ML)**, and **Cloud-Synchronized Mobile Development** simultaneously. The code tackles very complex mobile edge cases like backgrounding, byte recording formats, hardware permissions, and instantaneous network distribution, wrapping it all into an aesthetically pleasing and potentially life-saving package.
 
 *Stay safe. Stay connected. With Suraksha.*
